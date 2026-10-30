@@ -14,7 +14,7 @@ GitHub Actions 实现 [GLaDOS][glados] 自动签到
 
 1. 添加 Secret `GLADOS_UA`，内容为获取 Cookie 时同一浏览器的 User-Agent。在该浏览器开发者工具的控制台输入 `navigator.userAgent`，复制返回的字符串（不含外层引号）。GLaDOS 会校验登录设备；更换浏览器或浏览器更新后，可能需要重新登录并同时更新 `GLADOS` 与 `GLADOS_UA`。
 
-1. 启用 Actions, 每天北京时间 00:10 自动签到
+1. 启用 Actions, 每天北京时间 09:00 自动签到
 
 ## 高级功能
 
