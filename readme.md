@@ -12,11 +12,15 @@ GitHub Actions 实现 [GLaDOS][glados] 自动签到
 
 1. 添加 Cookie 到 Secret `GLADOS`
 
+1. 添加 Secret `GLADOS_UA`，内容为获取 Cookie 时同一浏览器的 User-Agent。在该浏览器开发者工具的控制台输入 `navigator.userAgent`，复制返回的字符串（不含外层引号）。GLaDOS 会校验登录设备；更换浏览器或浏览器更新后，可能需要重新登录并同时更新 `GLADOS` 与 `GLADOS_UA`。
+
 1. 启用 Actions, 每天北京时间 00:10 自动签到
 
 ## 高级功能
 
 1. 如有多个帐号, 可以写为多行 Secret `GLADOS`, 每行写一个 Cookie
+
+1. 多帐号使用同一浏览器标识时，`GLADOS_UA` 填一行即可；使用不同浏览器时，逐行与 `GLADOS` 对应。未配置时使用默认浏览器标识，但不能保证通过设备校验。
 
 1. 如需修改时间, 可以修改文件 [run.yml](.github/workflows/run.yml#L7) 中的 `cron` 参数, 格式可参考 [crontab]
 
@@ -29,6 +33,16 @@ GitHub Actions 实现 [GLaDOS][glados] 自动签到
     1. 如需配置多个, 可以写为多行, 每行写一个
 
 1. 注意: Cookie 以及接口输出数据, 包含帐号敏感信息, 因此不要随意公开
+
+## 排查失败
+
+Actions 日志会直接输出每个帐号的成功或失败状态，无需配置 `NOTIFY`。任一帐号失败、Cookie 未配置或接口异常时，任务会显示失败，不再静默显示绿色成功。
+
+若看到 `device-mismatch`、`Automated check-in detected` 或 `没有权限`，请在 GLaDOS 网站重新登录，再从同一浏览器更新完整 Cookie 和 User-Agent 到上述两个 Secret。不要将这些内容提交到仓库或发到公开评论。
+
+`HTTP 429/5xx`、超时或非 JSON 响应应按对应网络或服务器错误排查。不要把运行环境的版本弃用警告当作签到成功或失败的依据。
+
+本地运行 `npm test` 可验证成功、重复签到、设备校验失败、失效 Cookie 和网络错误等路径；测试仅使用模拟响应，不会访问真实帐号。
 
 ---
 

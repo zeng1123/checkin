@@ -1,39 +1,99 @@
+const lines = (value) => String(value || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+const defaultAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+
+// Actions logs are public. Never print cookies, notification tokens or account emails.
+const redact = (value) => {
+  let message = String(value || 'Unknown error')
+  const secrets = [...lines(process.env.GLADOS), ...lines(process.env.NOTIFY)]
+  for (const cookie of lines(process.env.GLADOS)) {
+    for (const part of cookie.split(';')) {
+      const separator = part.indexOf('=')
+      if (separator >= 0) secrets.push(part.slice(separator + 1).trim())
+    }
+  }
+  for (const option of lines(process.env.NOTIFY)) secrets.push(...option.split(':'))
+  for (const secret of secrets.filter((secret) => secret.length >= 6)) {
+    message = message.split(secret).join('[redacted]')
+  }
+  return message.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, '[redacted email]').replace(/[\r\n]+/g, ' ').slice(0, 600)
+}
+
+const requestJson = async (path, options) => {
+  const response = await fetch(`https://glados.cloud${path}`, {
+    ...options,
+    signal: AbortSignal.timeout(20000),
+  })
+  if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`)
+  try {
+    return await response.json()
+  } catch {
+    throw new Error(`${path}: response is not valid JSON`)
+  }
+}
+
+const apiError = (label, result) => new Error(
+  `${label}: ${redact(result?.message || 'Invalid API response')} (code=${redact(result?.code ?? 'missing')}${result?.reason ? ', reason=' + redact(result.reason) : ''})`
+)
+
 const glados = async () => {
   const notice = []
-  if (!process.env.GLADOS) return
-  for (const cookie of String(process.env.GLADOS).split('\n')) {
-    if (!cookie) continue
+  const cookies = lines(process.env.GLADOS)
+  const agents = lines(process.env.GLADOS_UA)
+  let failed = 0
+  if (!cookies.length) {
+    console.error('Checkin Error: GLADOS is missing or empty. Update the GLADOS repository secret.')
+    return { notice: ['Checkin Error', 'GLADOS is missing or empty'], failed: 1 }
+  }
+  if (agents.length > 1 && agents.length !== cookies.length) {
+    console.error('Checkin Error: GLADOS_UA must contain one shared User-Agent or one line per account.')
+    return { notice: ['Checkin Error', 'GLADOS_UA account count does not match GLADOS'], failed: 1 }
+  }
+  console.log(`Starting GLaDOS check-in for ${cookies.length} account(s).`)
+  if (!agents.length) console.log('GLADOS_UA is not configured; using the default browser identifier. If device validation fails, set it to the browser used to obtain GLADOS.')
+  for (const [index, cookie] of cookies.entries()) {
+    const label = `Account ${index + 1}`
     try {
       const common = {
         'cookie': cookie,
         'referer': 'https://glados.cloud/console/checkin',
-        'user-agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)',
+        'origin': 'https://glados.cloud',
+        'user-agent': agents[index] || agents[0] || defaultAgent,
       }
-      const action = await fetch('https://glados.cloud/api/user/checkin', {
+      const action = await requestJson('/api/user/checkin', {
         method: 'POST',
         headers: { ...common, 'content-type': 'application/json' },
         body: '{"token":"glados.cloud"}',
-      }).then((r) => r.json())
-      if (action?.code) throw new Error(action?.message)
-      const status = await fetch('https://glados.cloud/api/user/status', {
+      })
+      const alreadyCheckedIn = action?.code === 1 && /checkin repeats|already checked in|today's observation logged|今日已签到/i.test(String(action?.message))
+      if (action?.code !== 0 && !alreadyCheckedIn) throw apiError('Check-in failed', action)
+      const status = await requestJson('/api/user/status', {
         method: 'GET',
         headers: { ...common },
-      }).then((r) => r.json())
-      if (status?.code) throw new Error(status?.message)
+      })
+      if (status?.code !== 0) throw apiError('Login status failed', status)
+      if (status?.data?.leftDays == null || !Number.isFinite(Number(status.data.leftDays))) throw new Error('Status response does not contain valid remaining days')
+      console.log(`[${label}] ${alreadyCheckedIn ? 'Already checked in' : 'Checkin OK'} (code=${action.code})`)
       notice.push(
-        'Checkin OK',
-        `${action?.message}`,
+        `[${label}] Checkin OK`,
+        redact(action?.message),
         `Left Days ${Number(status?.data?.leftDays)}`
       )
     } catch (error) {
+      failed += 1
+      const message = redact(error.message)
+      console.error(`[${label}] Checkin Error: ${message}`)
+      if (/device-mismatch|Automated check-in detected|没有权限|No permission/i.test(message)) {
+        console.error('Log in again at https://glados.cloud and update GLADOS plus GLADOS_UA from the same browser. Do not post credentials in logs or issues.')
+      }
       notice.push(
-        'Checkin Error',
-        `${error}`,
+        `[${label}] Checkin Error`,
+        message,
         `<${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}>`
       )
     }
   }
-  return notice
+  console.log(`Finished: ${cookies.length - failed} succeeded, ${failed} failed.`)
+  return { notice, failed }
 }
 
 const notify = async (notice) => {
@@ -110,7 +170,12 @@ const notify = async (notice) => {
 }
 
 const main = async () => {
-  await notify(await glados())
+  const { notice, failed } = await glados()
+  if (failed) process.exitCode = 1
+  await notify(notice)
 }
 
-main()
+main().catch((error) => {
+  console.error(`Checkin Error: ${redact(error.message)}`)
+  process.exitCode = 1
+})

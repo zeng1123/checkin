@@ -6,16 +6,23 @@ on:
   schedule:
     - cron: 10 16 * * *
 
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 18
+          node-version: 24
+          package-manager-cache: false
       - run: npm ci
+      - run: npm test
       - run: npm run main
         env:
           GLADOS: ${{ secrets.GLADOS }}
+          GLADOS_UA: ${{ secrets.GLADOS_UA }}
           NOTIFY: ${{ secrets.NOTIFY }}
