@@ -1,5 +1,7 @@
 const lines = (value) => String(value || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
 const defaultAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+const domain = String(process.env.GLADOS_DOMAIN || 'glados.cloud').trim().toLowerCase()
+const allowedDomains = new Set(['glados.cloud', 'glados.rocks'])
 
 // Actions logs are public. Never print cookies, notification tokens or account emails.
 const redact = (value) => {
@@ -19,8 +21,9 @@ const redact = (value) => {
 }
 
 const requestJson = async (path, options) => {
-  const response = await fetch(`https://glados.cloud${path}`, {
+  const response = await fetch(`https://${domain}${path}`, {
     ...options,
+    redirect: 'error',
     signal: AbortSignal.timeout(20000),
   })
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`)
@@ -40,6 +43,10 @@ const glados = async () => {
   const cookies = lines(process.env.GLADOS)
   const agents = lines(process.env.GLADOS_UA)
   let failed = 0
+  if (!allowedDomains.has(domain)) {
+    console.error('Checkin Error: GLADOS_DOMAIN must be glados.cloud or glados.rocks.')
+    return { notice: ['Checkin Error', 'Unsupported GLADOS_DOMAIN'], failed: 1 }
+  }
   if (!cookies.length) {
     console.error('Checkin Error: GLADOS is missing or empty. Update the GLADOS repository secret.')
     return { notice: ['Checkin Error', 'GLADOS is missing or empty'], failed: 1 }
@@ -49,20 +56,21 @@ const glados = async () => {
     return { notice: ['Checkin Error', 'GLADOS_UA account count does not match GLADOS'], failed: 1 }
   }
   console.log(`Starting GLaDOS check-in for ${cookies.length} account(s).`)
+  console.log(`GLaDOS domain: ${domain}`)
   if (!agents.length) console.log('GLADOS_UA is not configured; using the default browser identifier. If device validation fails, set it to the browser used to obtain GLADOS.')
   for (const [index, cookie] of cookies.entries()) {
     const label = `Account ${index + 1}`
     try {
       const common = {
         'cookie': cookie,
-        'referer': 'https://glados.cloud/console/checkin',
-        'origin': 'https://glados.cloud',
+        'referer': `https://${domain}/console/checkin`,
+        'origin': `https://${domain}`,
         'user-agent': agents[index] || agents[0] || defaultAgent,
       }
       const action = await requestJson('/api/user/checkin', {
         method: 'POST',
         headers: { ...common, 'content-type': 'application/json' },
-        body: '{"token":"glados.cloud"}',
+        body: JSON.stringify({ token: domain }),
       })
       const alreadyCheckedIn = action?.code === 1 && /checkin repeats|already checked in|today's observation logged|今日已签到/i.test(String(action?.message))
       if (action?.code !== 0 && !alreadyCheckedIn) throw apiError('Check-in failed', action)
@@ -83,7 +91,7 @@ const glados = async () => {
       const message = redact(error.message)
       console.error(`[${label}] Checkin Error: ${message}`)
       if (/device-mismatch|Automated check-in detected|没有权限|No permission/i.test(message)) {
-        console.error('Log in again at https://glados.cloud and update GLADOS plus GLADOS_UA from the same browser. Do not post credentials in logs or issues.')
+        console.error(`Log in again at https://${domain} and update GLADOS plus GLADOS_UA from the same browser. Do not post credentials in logs or issues.`)
       }
       notice.push(
         `[${label}] Checkin Error`,

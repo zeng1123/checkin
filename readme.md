@@ -22,6 +22,8 @@ GitHub Actions 实现 [GLaDOS][glados] 自动签到
 
 1. 多帐号使用同一浏览器标识时，`GLADOS_UA` 填一行即可；使用不同浏览器时，逐行与 `GLADOS` 对应。未配置时使用默认浏览器标识，但不能保证通过设备校验。
 
+1. 如实际登录地址为 `glados.rocks`，在 Settings → Secrets and variables → Actions → Variables 中设置仓库变量 `GLADOS_DOMAIN` 为 `glados.rocks`。默认值为 `glados.cloud`，目前仅支持这两个域名。Cookie 和浏览器标识请从所选地址的同一次登录获取；不要手动更改 Cookie 字段前缀或省略签名字段。
+
 1. 如需修改时间, 可以修改文件 [run.yml](.github/workflows/run.yml#L7) 中的 `cron` 参数, 格式可参考 [crontab]
 
 1. 如需推送通知, 可配置 Secret `NOTIFY`, 已支持:

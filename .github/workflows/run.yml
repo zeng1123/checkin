@@ -25,4 +25,5 @@ jobs:
         env:
           GLADOS: ${{ secrets.GLADOS }}
           GLADOS_UA: ${{ secrets.GLADOS_UA }}
+          GLADOS_DOMAIN: ${{ vars.GLADOS_DOMAIN }}
           NOTIFY: ${{ secrets.NOTIFY }}

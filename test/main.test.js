@@ -122,3 +122,20 @@ test('the existing console notification format remains supported', async () => {
   assert.equal(result.exitCode, 0)
   assert.match(result.output, /Left Days 12.5/)
 })
+
+test('the selected GLaDOS domain is used consistently for URLs, browser headers and check-in token', async () => {
+  const result = await run({ env: { GLADOS_DOMAIN: 'glados.rocks' } })
+  assert.equal(result.exitCode, 0)
+  assert.equal(result.calls[0].url, 'https://glados.rocks/api/user/checkin')
+  assert.equal(result.calls[1].url, 'https://glados.rocks/api/user/status')
+  assert.equal(result.calls[0].options.headers.origin, 'https://glados.rocks')
+  assert.equal(result.calls[0].options.headers.referer, 'https://glados.rocks/console/checkin')
+  assert.deepEqual(JSON.parse(result.calls[0].options.body), { token: 'glados.rocks' })
+  assert.equal(result.calls[0].options.redirect, 'error')
+})
+
+test('an unsupported domain fails without sending credentials', async () => {
+  const result = await run({ env: { GLADOS_DOMAIN: 'example.com' } })
+  assert.equal(result.exitCode, 1)
+  assert.equal(result.calls.length, 0)
+})
