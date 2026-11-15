@@ -1,18 +1,38 @@
 name: run
+run-name: GLaDOS 动态时间检查（成功签到后当天跳过）
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 仅预演，不签到、不写入状态
+        type: boolean
+        default: false
+      reset_blocked:
+        description: 已人工处理验证或更新登录信息后，解除今日人工处理标记（不重置3次上限）
+        type: boolean
+        default: false
   push:
+    branches: [main]
   schedule:
-    - cron: "0 1 * * *" # UTC 01:00 = 北京时间 09:00
+    # UTC 00:11-14:41 = 北京时间08:11-22:41；22:30后仅收尾，不再签到。
+    - cron: '11,41 0-14 * * *'
 
 permissions:
   contents: read
 
+concurrency:
+  group: glados-daily-checkin
+  cancel-in-progress: false
+
 jobs:
   run:
+    name: 检查当日计划并按需签到
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      # GITHUB_TOKEN仅在独立状态分支保存非敏感调度记录。
+      contents: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -21,9 +41,14 @@ jobs:
           package-manager-cache: false
       - run: npm ci
       - run: npm test
-      - run: npm run main
+      - name: 检查随机时间、每日状态和重试规则
+        run: npm run scheduled
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GLADOS: ${{ secrets.GLADOS }}
           GLADOS_UA: ${{ secrets.GLADOS_UA }}
           GLADOS_DOMAIN: ${{ vars.GLADOS_DOMAIN }}
           NOTIFY: ${{ secrets.NOTIFY }}
+          # 推送只测试和预演；定时及普通手动事件才可能签到。
+          CHECKIN_DRY_RUN: ${{ github.event_name == 'push' || inputs.dry_run == true }}
+          CHECKIN_RESET_BLOCKED: ${{ github.event_name == 'workflow_dispatch' && inputs.reset_blocked == true }}

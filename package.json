@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "main": "node main.js",
+    "scheduled": "node scheduler.js",
     "test": "node --test"
   }
 }
