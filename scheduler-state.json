@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "days": {
+    "2026-11-15": {
+      "targetAt": "2026-11-15T02:55:00.000Z",
+      "accounts": [
+        {
+          "account": 1,
+          "status": "manual_required",
+          "attempts": 1,
+          "lastAttemptAt": "2026-11-15T07:21:20.048Z",
+          "nextAttemptAt": null,
+          "reason": "turnstile"
+        }
+      ]
+    }
+  }
+}
