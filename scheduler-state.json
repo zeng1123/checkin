@@ -12,7 +12,8 @@
           "nextAttemptAt": null,
           "reason": "turnstile"
         }
-      ]
+      ],
+      "policyVersion": 1
     }
   }
 }
