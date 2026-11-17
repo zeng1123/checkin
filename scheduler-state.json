@@ -28,6 +28,19 @@
           "lastAttemptAt": "2026-11-16T06:24:32.361Z"
         }
       ]
+    },
+    "2026-11-17": {
+      "policyVersion": 1,
+      "targetAt": "2026-11-17T02:34:00.000Z",
+      "accounts": [
+        {
+          "account": 1,
+          "status": "pending",
+          "attempts": 0,
+          "nextAttemptAt": "2026-11-17T02:34:00.000Z",
+          "reason": "scheduled"
+        }
+      ]
     }
   }
 }
