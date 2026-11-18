@@ -49,10 +49,11 @@
       "accounts": [
         {
           "account": 1,
-          "status": "pending",
-          "attempts": 0,
-          "nextAttemptAt": "2026-11-18T03:28:00.000Z",
-          "reason": "scheduled"
+          "status": "in_flight",
+          "attempts": 1,
+          "nextAttemptAt": null,
+          "reason": "request_started",
+          "lastAttemptAt": "2026-11-18T07:24:59.130Z"
         }
       ]
     }
