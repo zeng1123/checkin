@@ -91,10 +91,11 @@
       "accounts": [
         {
           "account": 1,
-          "status": "pending",
-          "attempts": 0,
-          "nextAttemptAt": "2026-11-22T02:14:00.000Z",
-          "reason": "scheduled"
+          "status": "in_flight",
+          "attempts": 1,
+          "nextAttemptAt": null,
+          "reason": "request_started",
+          "lastAttemptAt": "2026-11-22T06:43:55.464Z"
         }
       ]
     }
