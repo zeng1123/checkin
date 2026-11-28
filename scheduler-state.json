@@ -1,20 +1,6 @@
 {
   "version": 1,
   "days": {
-    "2026-11-21": {
-      "policyVersion": 1,
-      "targetAt": "2026-11-21T03:00:00.000Z",
-      "accounts": [
-        {
-          "account": 1,
-          "status": "manual_required",
-          "attempts": 1,
-          "nextAttemptAt": null,
-          "reason": "turnstile",
-          "lastAttemptAt": "2026-11-21T07:03:40.232Z"
-        }
-      ]
-    },
     "2026-11-22": {
       "policyVersion": 1,
       "targetAt": "2026-11-22T02:14:00.000Z",
@@ -96,6 +82,19 @@
           "nextAttemptAt": null,
           "reason": "turnstile",
           "lastAttemptAt": "2026-11-27T08:26:01.695Z"
+        }
+      ]
+    },
+    "2026-11-28": {
+      "policyVersion": 1,
+      "targetAt": "2026-11-28T01:28:00.000Z",
+      "accounts": [
+        {
+          "account": 1,
+          "status": "pending",
+          "attempts": 0,
+          "nextAttemptAt": "2026-11-28T01:28:00.000Z",
+          "reason": "scheduled"
         }
       ]
     }
